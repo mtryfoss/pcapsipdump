@@ -599,7 +599,7 @@ int main(int argc, char *argv[])
                                     strlcpy(ct->table[idx].fn_pcap, fn, sizeof(ct->table[idx].fn_pcap));
                                 }
 			    }else{
-				if (verbosity>=2){
+				if (verbosity>=5){
 				    printf("Unknown SIP method:'%s'!\n",sip_method);
 				}
 				ct->table[idx].f_pcap=NULL;

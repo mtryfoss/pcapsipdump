@@ -76,7 +76,7 @@ int calltable::add(
     table[idx].rtpmap_event = 101;
     table[idx].had_t38=0;
     table[idx].had_bye=0;
-    memcpy(table[idx].call_id,call_id,MIN(call_id_len,32));
+    memcpy(table[idx].call_id,call_id,MIN(call_id_len,256));
     table[idx].call_id_len=call_id_len;
     memcpy(table[idx].caller, caller, sizeof(table[0].caller));
     memcpy(table[idx].callee, callee, sizeof(table[0].callee));
@@ -116,7 +116,7 @@ int calltable::find_by_call_id(
     for (i = 0; i < (int)table.size(); i++) {
 	if ((table[i].is_used!=0)&&
 	    (table[i].call_id_len==call_id_len)&&
-	    (memcmp(table[i].call_id,call_id,MIN(call_id_len,32))==0)){
+	    (memcmp(table[i].call_id,call_id,MIN(call_id_len,256))==0)){
 	    return i;
 	}
     }
@@ -211,7 +211,7 @@ int calltable::do_cleanup( time_t currtime ){
     int idx;
     for (idx = 0; idx < (int)table.size(); idx++) {
 	if (table[idx].is_used && (
-                    (currtime - table[idx].last_packet_time > 300) ||
+                    (currtime - table[idx].last_packet_time > 300) || (table[idx].had_bye && currtime - table[idx].last_packet_time > 30) ||
                     (currtime - table[idx].first_packet_time > opt_absolute_timeout))){
 	    if (table[idx].f_pcap != NULL){
 		pcap_dump_close(table[idx].f_pcap);

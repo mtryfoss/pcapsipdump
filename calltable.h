@@ -40,7 +40,7 @@ struct calltable_element {
         unsigned char rtpmap_event;
 	char caller[16];
 	char callee[16];
-	char call_id[32];
+	char call_id[256];
 	unsigned long call_id_len ;
 	in_addr_t ip[calltable_max_ip_per_call];
         uint16_t port[calltable_max_ip_per_call];
