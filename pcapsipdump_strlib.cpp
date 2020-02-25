@@ -4,12 +4,18 @@
 
 const char * gettag(const char *ptr, unsigned long len, const char *tag, unsigned long *gettaglen){
     unsigned long tl;
+    long l;
     const char *r, *lp;
 
     if(len > 1){
         tl = strlen(tag);
         for(r = ptr; r != NULL;){
-            r = (const char*)memmem(r+1, len-(r-ptr)-2, tag, tl);
+            l = len-(r-ptr)-2;
+            if(l < 0) {
+                *gettaglen = 0;
+                return NULL;
+            }
+            r = (const char*)memmem(r+1, l, tag, tl);
             if(r && (r[-1] == '\r' || r[-1] == '\n')) {
                 r += tl;
                 while (r[0] == ' ') {
