@@ -245,14 +245,26 @@ int calltable::do_cleanup( time_t currtime ){
     return 0;
 }
 
-void calltable::add_ipfrag(struct addr_addr_id aai, pcap_dumper_t *f) {
-    ipfrags[aai] = f;
+void calltable::add_ipfrag1(struct addr_addr_id aai, pcap_dumper_t *f) {
+    ipfrags1[aai] = f;
 }
 
-void calltable::delete_ipfrag(struct addr_addr_id aai) {
-    ipfrags.erase(aai);
+void calltable::delete_ipfrag1(struct addr_addr_id aai) {
+    ipfrags1.erase(aai);
 }
 
-pcap_dumper_t *calltable::get_ipfrag(struct addr_addr_id aai) {
-    return ipfrags[aai];
+pcap_dumper_t *calltable::get_ipfrag1(struct addr_addr_id aai) {
+    return ipfrags1[aai];
+}
+
+void calltable::add_ipfrag2(struct addr_addr_id aai, pcap_dumper_t *f) {
+    ipfrags2[aai] = f;
+}
+
+void calltable::delete_ipfrag2(struct addr_addr_id aai) {
+    ipfrags2.erase(aai);
+}
+
+pcap_dumper_t *calltable::get_ipfrag2(struct addr_addr_id aai) {
+    return ipfrags2[aai];
 }

@@ -96,16 +96,24 @@ class calltable
             uint32_t ssrc,
             calltable_element **ce,
             int *idx_rtp);
-        void add_ipfrag(
+        void add_ipfrag1(
             struct addr_addr_id aai,
             pcap_dumper_t *f);
-        void delete_ipfrag(
+        void delete_ipfrag1(
             struct addr_addr_id aai);
-        pcap_dumper_t *get_ipfrag(
+        pcap_dumper_t *get_ipfrag1(
             struct addr_addr_id aai);
-	int do_cleanup( time_t currtime );
+        void add_ipfrag2(
+            struct addr_addr_id aai,
+            pcap_dumper_t *f);
+        void delete_ipfrag2(
+            struct addr_addr_id aai);
+        pcap_dumper_t *get_ipfrag2(
+            struct addr_addr_id aai);
+        int do_cleanup( time_t currtime );
 	std::vector <calltable_element> table;
-        std::map <addr_addr_id, pcap_dumper_t *> ipfrags;
+    std::map <addr_addr_id, pcap_dumper_t *> ipfrags1;
+    std::map <addr_addr_id, pcap_dumper_t *> ipfrags2;
 	bool erase_non_t38;
         int opt_absolute_timeout;
     private:

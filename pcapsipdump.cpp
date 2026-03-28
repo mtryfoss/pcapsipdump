@@ -464,12 +464,20 @@ int main(int argc, char *argv[])
                 struct addr_addr_id aai = (struct addr_addr_id){header_ip->saddr,
                                                                header_ip->daddr,
                                                                header_ip->id};
-                pcap_dumper_t *f = ct->get_ipfrag(aai);
+                pcap_dumper_t *f = ct->get_ipfrag1(aai);
                 if (f) {
                     pcap_dump((u_char *)f,pkt_header,pkt_data);
                     if (opt_packetbuffered) {pcap_dump_flush(f);}
                     if ((header_ip->frag_off & htons(0x2000)) == 0 ) { // more_fragments == 0
-                        ct->delete_ipfrag(aai);
+                        ct->delete_ipfrag1(aai);
+                    }
+                }
+                pcap_dumper_t *f2 = ct->get_ipfrag2(aai);
+                if (f2) {
+                    pcap_dump((u_char *)f2,pkt_header,pkt_data);
+                    if (opt_packetbuffered) {pcap_dump_flush(f2);}
+                    if ((header_ip->frag_off & htons(0x2000)) == 0 ) { // more_fragments == 0
+                        ct->delete_ipfrag2(aai);
                     }
                 }
             } else if ( /* sane IPv4 UDP */
@@ -627,10 +635,16 @@ int main(int argc, char *argv[])
                             if (opt_packetbuffered) {pcap_dump_flush(ct->table[idx].f_pcap);}
                         }
                         if (header_ip->version == 4 && header_ip->frag_off == htons(0x2000)) { //flags == more fragments and offset == 0
-                            ct->add_ipfrag((struct addr_addr_id){header_ip->saddr,
-                                                                 header_ip->daddr,
-                                                                 header_ip->id}, ct->table[idx].f_pcap);
-		        }
+                            struct addr_addr_id aai = (struct addr_addr_id){header_ip->saddr,
+                                                                        header_ip->daddr,
+                                                                        header_ip->id};
+                            pcap_dumper_t *f = ct->get_ipfrag1(aai);
+                            if (!f) {
+                                ct->add_ipfrag1(aai, ct->table[idx].f_pcap);
+                            } else {
+                                ct->add_ipfrag2(aai, ct->table[idx].f_pcap);
+                            }
+		                }
                     }
 		}else{
 		    if (verbosity>=3){
