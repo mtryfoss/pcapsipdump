@@ -721,9 +721,13 @@ int main(int argc, char *argv[])
                         {
                             ct->table[idx].had_bye = 1;
                         }
-                        s = gettag(data, datalen, "Content-Type:", &l) ?: gettag(data, datalen, "c:", &l);
+                        /*s = gettag(data, datalen, "Content-Type:", &l) ?: gettag(data, datalen, "c:", &l);
                         if (l > 0 && s && strncasecmp(s, "application/sdp", l) == 0 &&
                             (sdp = strstr(data, "\r\n\r\n")) != NULL)
+                        {
+                            parse_sdp(sdp, datalen - (sdp - data), &ct->table[idx]);
+                        }*/
+                        if ((sdp = strstr(data, "\r\n\r\n")) != NULL)
                         {
                             parse_sdp(sdp, datalen - (sdp - data), &ct->table[idx]);
                         }
