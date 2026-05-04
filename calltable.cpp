@@ -344,3 +344,18 @@ void calltable::expire_frags(time_t now, int max_age_seconds = 5)
         }
     }
 }
+
+pending_frag_stream *calltable::get_frags(struct addr_addr_id aai)
+{
+    auto key = std::make_tuple(aai.saddr, aai.daddr, aai.id);
+    auto it = frag_buffer.find(key);
+    if (it == frag_buffer.end())
+        return nullptr;
+    return &it->second;
+}
+
+void calltable::delete_frags(struct addr_addr_id aai)
+{
+    auto key = std::make_tuple(aai.saddr, aai.daddr, aai.id);
+    frag_buffer.erase(key);
+}

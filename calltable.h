@@ -129,6 +129,8 @@ public:
                      pcap_dumper_t *f,
                      bool packet_buffered);
     void expire_frags(time_t now, int max_age_seconds);
+    pending_frag_stream *get_frags(struct addr_addr_id aai);
+    void delete_frags(struct addr_addr_id aai);
     std::vector<calltable_element> table;
     std::map<addr_addr_id, pcap_dumper_t *> ipfrags;
     std::map<std::tuple<uint32_t, uint32_t, uint16_t>, pending_frag_stream> frag_buffer;

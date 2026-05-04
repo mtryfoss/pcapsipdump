@@ -146,7 +146,7 @@ int parse_sdp(const char *sdp, size_t sdplen, calltable_element *ce)
     }
     else
     {
-        if (verbosity >= 2)
+        if (verbosity >= 5)
         {
             printf("Can't get ip/port from SDP:\n%s\n\n", sdp);
             return -1;
@@ -729,7 +729,7 @@ int main(int argc, char *argv[])
                         }*/
                         parse_sdp(data, datalen, &ct->table[idx]);
                         if (l > 0 && s && strncasecmp(s, "multipart/mixed;boundary=", MIN(l, 25)) == 0 &&
-                                 (sdp = strstr(data, "\r\n\r\n")) != NULL)
+                            (sdp = strstr(data, "\r\n\r\n")) != NULL)
                         {
                             // FIXME: do proper mime miltipart parsing
                             parse_sdp(sdp, datalen - (sdp - data), &ct->table[idx]);
@@ -745,7 +745,22 @@ int main(int argc, char *argv[])
                             {
                                 struct addr_addr_id aai = {header_ip->saddr, header_ip->daddr, header_ip->id};
                                 // Write fragment 0 first (done above), then flush buffered later fragments
-                                ct->flush_frags(aai, ct->table[idx].f_pcap, opt_packetbuffered);
+                                // ct->flush_frags(aai, ct->table[idx].f_pcap, opt_packetbuffered);
+                                auto *frags = ct->get_frags(aai);
+                                if (frags)
+                                {
+                                    for (auto &pf : frags->packets)
+                                    {
+                                        struct iphdr *iph = (struct iphdr *)(pf.data.data() + offset_to_ip);
+                                        char *payload = (char *)iph + (iph->ihl * 4) + 8;
+                                        size_t payloadlen = pf.data.size() - ((char *)payload - (char *)pf.data.data());
+                                        parse_sdp(payload, payloadlen, &ct->table[idx]);
+                                        pcap_dump((u_char *)ct->table[idx].f_pcap, &pf.header, pf.data.data());
+                                        if (opt_packetbuffered)
+                                            pcap_dump_flush(ct->table[idx].f_pcap);
+                                    }
+                                    ct->delete_frags(aai);
+                                }
                                 ct->add_ipfrag(aai, ct->table[idx].f_pcap);
                             }
                         }
@@ -817,28 +832,28 @@ fail_exit:
 
 int get_ip_port_from_sdp(const char *sdp, size_t sdplen, in_addr_t *addr, unsigned short *port)
 {
-    unsigned long l;
-    const char *s;
-    char s1[20];
-    s = gettag(sdp, sdplen, "c=IN IP4 ", &l);
-    memset(s1, '\0', sizeof(s1));
-    memcpy(s1, s, MIN(l, 19));
-    if ((long)(*addr = inet_addr(s1)) == -1)
+    const char *p;
+    char ip[20];
+    unsigned short pt;
+
+    p = (const char *)memmem(sdp, sdplen, "c=IN IP4 ", 9);
+    if (!p || sscanf(p + 9, "%19s", ip) != 1 || (*addr = inet_addr(ip)) == INADDR_NONE)
     {
         *addr = 0;
         *port = 0;
         return 1;
     }
-    s = gettag(sdp, sdplen, "m=audio ", &l);
-    if (l == 0)
-    {
-        s = gettag(sdp, sdplen, "m=image ", &l);
-    }
-    if (l == 0 || (*port = atoi(s)) == 0)
+
+    p = (const char *)memmem(sdp, sdplen, "m=audio ", 8);
+    if (!p)
+        p = (const char *)memmem(sdp, sdplen, "m=image ", 8);
+    if (!p || sscanf(p + 8, "%hu", &pt) != 1 || pt == 0)
     {
         *port = 0;
         return 1;
     }
+
+    *port = pt;
     return 0;
 }
 
