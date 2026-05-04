@@ -1,11 +1,11 @@
 #include <sys/stat.h>
 
 #ifndef BSD
-  #ifdef USE_BSD_STRING_H
-    #include <bsd/string.h>
-  #else
-    #define strlcpy strncpy
-  #endif
+#ifdef USE_BSD_STRING_H
+#include <bsd/string.h>
+#else
+#define strlcpy strncpy
+#endif
 #endif
 
 // equivalent of "mkdir -p"

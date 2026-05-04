@@ -29,21 +29,21 @@
 #include "calltable.h"
 
 #ifndef MIN
-#define MIN(x,y) ((x) < (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 #endif
 
 using namespace std;
-bool operator <(addr_addr_id const& a, addr_addr_id const& b)
+bool operator<(addr_addr_id const &a, addr_addr_id const &b)
 {
-    return a.saddr  < b.saddr ||
-          (a.saddr == b.saddr && a.daddr  < b.daddr ) ||
-          (a.saddr == b.saddr && a.daddr == b.daddr && a.id < b.id );
+    return a.saddr < b.saddr ||
+           (a.saddr == b.saddr && a.daddr < b.daddr) ||
+           (a.saddr == b.saddr && a.daddr == b.daddr && a.id < b.id);
 }
 
 #ifdef USE_CALLTABLE_CACHE
-bool operator <(addr_port const& a, addr_port const& b)
+bool operator<(addr_port const &a, addr_port const &b)
 {
-    return a.addr < b.addr || (a.addr == b.addr && a.port < b.port );
+    return a.addr < b.addr || (a.addr == b.addr && a.port < b.port);
 }
 #endif
 
@@ -55,36 +55,39 @@ calltable::calltable()
 }
 
 int calltable::add(
-	const char *call_id,
-	unsigned long call_id_len,
-        const char *caller,
-        const char *callee,
-	time_t time)
+    const char *call_id,
+    unsigned long call_id_len,
+    const char *caller,
+    const char *callee,
+    time_t time)
 {
     int idx = -1;
-    for (int i = 0; i < (int)table.size(); i++) {
-	if (table[i].is_used == 0) {
-	    idx = i;
-	    break;
-	}
+    for (int i = 0; i < (int)table.size(); i++)
+    {
+        if (table[i].is_used == 0)
+        {
+            idx = i;
+            break;
+        }
     }
-    if (idx == -1) {
-	idx = table.size();
-	table.push_back(calltable_element());
+    if (idx == -1)
+    {
+        idx = table.size();
+        table.push_back(calltable_element());
     }
-    table[idx].is_used=1;
+    table[idx].is_used = 1;
     table[idx].rtpmap_event = 101;
-    table[idx].had_t38=0;
-    table[idx].had_bye=0;
-    memcpy(table[idx].call_id,call_id,MIN(call_id_len,256));
-    table[idx].call_id_len=call_id_len;
+    table[idx].had_t38 = 0;
+    table[idx].had_bye = 0;
+    memcpy(table[idx].call_id, call_id, MIN(call_id_len, 256));
+    table[idx].call_id_len = call_id_len;
     memcpy(table[idx].caller, caller, sizeof(table[0].caller));
     memcpy(table[idx].callee, callee, sizeof(table[0].callee));
-    table[idx].ip_n=0;
-    table[idx].f_pcap=NULL;
+    table[idx].ip_n = 0;
+    table[idx].f_pcap = NULL;
     table[idx].first_packet_time = time;
-    table[idx].last_packet_time=time;
-    global_last_packet_time=time;
+    table[idx].last_packet_time = time;
+    global_last_packet_time = time;
 #ifdef USE_CALLTABLE_CACHE
     {
         std::string s(call_id, call_id_len);
@@ -92,48 +95,56 @@ int calltable::add(
     }
 #endif
     trigger.trigger(&trigger.open,
-        table[idx].fn_pcap,
-        table[idx].caller,
-        table[idx].callee,
-        table[idx].call_id,
-        table[idx].first_packet_time);
+                    table[idx].fn_pcap,
+                    table[idx].caller,
+                    table[idx].callee,
+                    table[idx].call_id,
+                    table[idx].first_packet_time);
     return idx;
 }
 
 int calltable::find_by_call_id(
-	const char *call_id,
-	unsigned long call_id_len)
+    const char *call_id,
+    unsigned long call_id_len)
 {
 #ifdef USE_CALLTABLE_CACHE
     std::string s(call_id, call_id_len);
-    if (call_id_cache.count(s)){
+    if (call_id_cache.count(s))
+    {
         return call_id_cache[s];
-    }else{
+    }
+    else
+    {
         return -1;
     }
 #else
     int i;
-    for (i = 0; i < (int)table.size(); i++) {
-	if ((table[i].is_used!=0)&&
-	    (table[i].call_id_len==call_id_len)&&
-	    (memcmp(table[i].call_id,call_id,MIN(call_id_len,256))==0)){
-	    return i;
-	}
+    for (i = 0; i < (int)table.size(); i++)
+    {
+        if ((table[i].is_used != 0) &&
+            (table[i].call_id_len == call_id_len) &&
+            (memcmp(table[i].call_id, call_id, MIN(call_id_len, 256)) == 0))
+        {
+            return i;
+        }
     }
     return -1;
 #endif
 }
 
 int calltable::add_ip_port(
-	    calltable_element *ce,
-	    in_addr_t addr,
-	    unsigned short port)
+    calltable_element *ce,
+    in_addr_t addr,
+    unsigned short port)
 {
-    if (ce->ip_n >= calltable_max_ip_per_call) {
+    if (ce->ip_n >= calltable_max_ip_per_call)
+    {
         return -1;
     }
-    for(int i=0; i < ce->ip_n; i++){
-        if(ce->ip[i] == addr && ce->port[i] == port) {
+    for (int i = 0; i < ce->ip_n; i++)
+    {
+        if (ce->ip[i] == addr && ce->port[i] == port)
+        {
             // we already track this ip:port tuple
             return 0;
         }
@@ -147,51 +158,64 @@ int calltable::add_ip_port(
     return 0;
 }
 
-//returns 1 if found or 0 if not found, and updates ce and idx_rtp
+// returns 1 if found or 0 if not found, and updates ce and idx_rtp
 int calltable::find_ip_port_ssrc(
-            in_addr_t addr,
-            unsigned short port,
-            uint32_t ssrc,
-            calltable_element **ce,
-            int *idx_rtp)
+    in_addr_t addr,
+    unsigned short port,
+    uint32_t ssrc,
+    calltable_element **ce,
+    int *idx_rtp)
 {
-    int i_leg,i_rtp;
+    int i_leg, i_rtp;
 
 #ifdef USE_CALLTABLE_CACHE
     struct addr_port ap = {addr, port};
-    while(true){
-        if(this->cache.count(ap)){
+    while (true)
+    {
+        if (this->cache.count(ap))
+        {
             *ce = cache[ap].ce;
             *idx_rtp = cache[ap].irtp;
-            if(*ce != NULL){
-                if(ssrc != cache[ap].ssrc){ // new ssid
-                    if((*ce)->had_bye){ // and call has finished
+            if (*ce != NULL)
+            {
+                if (ssrc != cache[ap].ssrc)
+                { // new ssid
+                    if ((*ce)->had_bye)
+                    { // and call has finished
                         // that's probably ip/port reuse
                         cache.erase(ap);
                         break; // abandon cache code, go to full search
-                    }else{
-                        //got new ssrc in the same ongoing call - update table & cache
+                    }
+                    else
+                    {
+                        // got new ssrc in the same ongoing call - update table & cache
                         (*ce)->ssrc[*idx_rtp] = ssrc;
                         cache[ap] = (struct ce_irtp_ssrc){*ce, *idx_rtp, ssrc};
                     }
                 }
                 return 1;
-            }else{
+            }
+            else
+            {
                 return 0;
             }
         }
         break;
     }
 #endif
-    for (i_leg = 0; i_leg < (int)table.size(); i_leg++){
-        for(i_rtp=0; i_rtp < MIN(calltable_max_ip_per_call, table[i_leg].ip_n); i_rtp++){
-            if(table[i_leg].port[i_rtp] == port &&
-               table[i_leg].ip  [i_rtp] == addr){
-                if(!table[i_leg].had_bye || table[i_leg].ssrc[i_rtp]==ssrc){
+    for (i_leg = 0; i_leg < (int)table.size(); i_leg++)
+    {
+        for (i_rtp = 0; i_rtp < MIN(calltable_max_ip_per_call, table[i_leg].ip_n); i_rtp++)
+        {
+            if (table[i_leg].port[i_rtp] == port &&
+                table[i_leg].ip[i_rtp] == addr)
+            {
+                if (!table[i_leg].had_bye || table[i_leg].ssrc[i_rtp] == ssrc)
+                {
 #ifdef USE_CALLTABLE_CACHE
                     cache[ap] = (struct ce_irtp_ssrc){&table[i_leg], i_rtp, ssrc};
 #endif
-                    table[i_leg].ssrc[i_rtp]=ssrc;
+                    table[i_leg].ssrc[i_rtp] = ssrc;
                     *ce = &table[i_leg];
                     *idx_rtp = i_rtp;
                     return 1;
@@ -207,30 +231,37 @@ int calltable::find_ip_port_ssrc(
     return 0;
 }
 
-int calltable::do_cleanup( time_t currtime ){
+int calltable::do_cleanup(time_t currtime)
+{
     int idx;
-    for (idx = 0; idx < (int)table.size(); idx++) {
-	if (table[idx].is_used && (
-                    (currtime - table[idx].last_packet_time > 300) || (table[idx].had_bye && currtime - table[idx].last_packet_time > 30) ||
-                    (currtime - table[idx].first_packet_time > opt_absolute_timeout))){
-	    if (table[idx].f_pcap != NULL){
-		pcap_dump_close(table[idx].f_pcap);
-                if (erase_non_t38 && !table[idx].had_t38) {
+    for (idx = 0; idx < (int)table.size(); idx++)
+    {
+        if (table[idx].is_used &&
+            ((currtime - table[idx].last_packet_time > 300) ||
+             (table[idx].had_bye && currtime - table[idx].last_packet_time > 30) ||
+             (currtime - table[idx].first_packet_time > opt_absolute_timeout)))
+        {
+            if (table[idx].f_pcap != NULL)
+            {
+                pcap_dump_close(table[idx].f_pcap);
+                if (erase_non_t38 && !table[idx].had_t38)
+                {
                     unlink(table[idx].fn_pcap);
-                }else{
-                    trigger.trigger(&trigger.close,
-                        table[idx].fn_pcap,
-                        table[idx].caller,
-                        table[idx].callee,
-                        table[idx].call_id,
-                        table[idx].first_packet_time);
                 }
-	    }
-	    memset((void*)&table[idx],0,sizeof(table[idx]));
-	    table[idx].is_used=0;
-	    table[idx].ip_n=0;
+                else
+                {
+                    trigger.trigger(&trigger.close,
+                                    table[idx].fn_pcap,
+                                    table[idx].caller,
+                                    table[idx].callee,
+                                    table[idx].call_id,
+                                    table[idx].first_packet_time);
+                }
+            }
 #ifdef USE_CALLTABLE_CACHE
-            for(int i_rtp=0; i_rtp<table[idx].ip_n; i_rtp++){
+            // Must read ip_n and call_id BEFORE memset wipes them
+            for (int i_rtp = 0; i_rtp < table[idx].ip_n; i_rtp++)
+            {
                 struct addr_port ap = {table[idx].ip[i_rtp],
                                        table[idx].port[i_rtp]};
                 cache.erase(ap);
@@ -240,19 +271,76 @@ int calltable::do_cleanup( time_t currtime ){
                 call_id_cache.erase(s);
             }
 #endif
-	}
+            memset((void *)&table[idx], 0, sizeof(table[idx]));
+            // is_used and ip_n are already 0 after memset, no need to set again
+        }
     }
+
+    // Expire fragment reassembly buffer entries older than 10 seconds
+    expire_frags(currtime, 10);
+
     return 0;
 }
 
-void calltable::add_ipfrag(struct addr_addr_id aai, pcap_dumper_t *f) {
+void calltable::add_ipfrag(struct addr_addr_id aai, pcap_dumper_t *f)
+{
     ipfrags[aai] = f;
 }
 
-void calltable::delete_ipfrag(struct addr_addr_id aai) {
+void calltable::delete_ipfrag(struct addr_addr_id aai)
+{
     ipfrags.erase(aai);
 }
 
-pcap_dumper_t *calltable::get_ipfrag(struct addr_addr_id aai) {
+pcap_dumper_t *calltable::get_ipfrag(struct addr_addr_id aai)
+{
     return ipfrags[aai];
+}
+
+void calltable::buffer_frag(struct addr_addr_id aai,
+                            const struct pcap_pkthdr *hdr,
+                            const u_char *data)
+{
+    auto key = std::make_tuple(aai.saddr, aai.daddr, aai.id);
+    auto &stream = frag_buffer[key];
+    stream.aai = aai;
+    stream.first_seen = hdr->ts.tv_sec;
+
+    pending_fragment pf;
+    pf.header = *hdr;
+    pf.data.assign(data, data + hdr->caplen);
+    stream.packets.push_back(std::move(pf));
+}
+
+void calltable::flush_frags(struct addr_addr_id aai,
+                            pcap_dumper_t *f,
+                            bool packet_buffered)
+{
+    auto key = std::make_tuple(aai.saddr, aai.daddr, aai.id);
+    auto it = frag_buffer.find(key);
+    if (it == frag_buffer.end())
+        return;
+
+    for (auto &pf : it->second.packets)
+    {
+        pcap_dump((u_char *)f, &pf.header, pf.data.data());
+        if (packet_buffered)
+            pcap_dump_flush(f);
+    }
+    frag_buffer.erase(it);
+}
+
+void calltable::expire_frags(time_t now, int max_age_seconds = 5)
+{
+    for (auto it = frag_buffer.begin(); it != frag_buffer.end();)
+    {
+        if (now - it->second.first_seen > max_age_seconds)
+        {
+            it = frag_buffer.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }
