@@ -727,11 +727,8 @@ int main(int argc, char *argv[])
                         {
                             parse_sdp(sdp, datalen - (sdp - data), &ct->table[idx]);
                         }*/
-                        if ((sdp = strstr(data, "\r\n\r\n")) != NULL)
-                        {
-                            parse_sdp(sdp, datalen - (sdp - data), &ct->table[idx]);
-                        }
-                        else if (l > 0 && s && strncasecmp(s, "multipart/mixed;boundary=", MIN(l, 25)) == 0 &&
+                        parse_sdp(data, datalen, &ct->table[idx]);
+                        if (l > 0 && s && strncasecmp(s, "multipart/mixed;boundary=", MIN(l, 25)) == 0 &&
                                  (sdp = strstr(data, "\r\n\r\n")) != NULL)
                         {
                             // FIXME: do proper mime miltipart parsing
