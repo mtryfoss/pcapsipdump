@@ -33,6 +33,13 @@
 
 #define calltable_max_ip_per_call 4
 
+struct addr_addr_id
+{
+    in_addr_t saddr;
+    in_addr_t daddr;
+    uint16_t id;
+};
+
 struct calltable_element
 {
     unsigned char is_used;
@@ -51,14 +58,9 @@ struct calltable_element
     time_t last_packet_time;
     pcap_dumper_t *f_pcap;
     char fn_pcap[128];
+    struct addr_addr_id last_aai;
 };
 
-struct addr_addr_id
-{
-    in_addr_t saddr;
-    in_addr_t daddr;
-    uint16_t id;
-};
 
 #ifdef USE_CALLTABLE_CACHE
 struct addr_port
@@ -114,6 +116,11 @@ public:
         uint32_t ssrc,
         calltable_element **ce,
         int *idx_rtp);
+    int find_all_ip_port_ssrc(
+        in_addr_t addr,
+        unsigned short port,
+        uint32_t ssrc,
+        std::vector<calltable_element *> &matches);
     void add_ipfrag(
         struct addr_addr_id aai,
         pcap_dumper_t *f);
@@ -131,6 +138,7 @@ public:
     void expire_frags(time_t now, int max_age_seconds);
     pending_frag_stream *get_frags(struct addr_addr_id aai);
     void delete_frags(struct addr_addr_id aai);
+    int find_by_aai(struct addr_addr_id aai);
     std::vector<calltable_element> table;
     std::map<addr_addr_id, pcap_dumper_t *> ipfrags;
     std::map<std::tuple<uint32_t, uint32_t, uint16_t>, pending_frag_stream> frag_buffer;
@@ -144,3 +152,5 @@ private:
     std::map<std::string, int> call_id_cache;
 #endif
 };
+
+bool aai_equal(const struct addr_addr_id &a, const struct addr_addr_id &b);

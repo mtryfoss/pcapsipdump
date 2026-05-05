@@ -143,6 +143,10 @@ int parse_sdp(const char *sdp, size_t sdplen, calltable_element *ce)
     if (!get_ip_port_from_sdp(sdp, sdplen, &addr, &port))
     {
         ct->add_ip_port(ce, addr, port);
+        if (verbosity >= 5)
+        {
+            printf("Got ip/port from SDP:\n%s\n\n", sdp);
+        }
     }
     else
     {
@@ -566,8 +570,6 @@ int main(int argc, char *argv[])
 #endif
             )
             {
-                calltable_element *ce = NULL;
-                int idx_rtp = 0;
                 int save_this_rtp_packet = 0;
                 int is_rtcp = 0;
                 uint16_t rtp_port_mask = 0xffff;
@@ -605,38 +607,20 @@ int main(int argc, char *argv[])
                     save_this_rtp_packet = 0;
                 }
 
+                std::vector<calltable_element *> rtp_matches;
                 if (save_this_rtp_packet &&
-                    ct->find_ip_port_ssrc(
-                        hdaddr(header_ip), htons(header_udp->dest) & rtp_port_mask,
-                        get_ssrc(data, is_rtcp),
-                        &ce, &idx_rtp))
+                    (ct->find_all_ip_port_ssrc(hdaddr(header_ip), htons(header_udp->dest) & rtp_port_mask, get_ssrc(data, is_rtcp), rtp_matches) ||
+                     ct->find_all_ip_port_ssrc(hsaddr(header_ip), htons(header_udp->source) & rtp_port_mask, get_ssrc(data, is_rtcp), rtp_matches)))
                 {
-                    if (ce->f_pcap != NULL &&
-                        (opt_rtpsave != RTPSAVE_RTPEVENT ||
-                         data[1] == ce->rtpmap_event))
+                    for (auto *ce : rtp_matches)
                     {
-                        ce->last_packet_time = pkt_header->ts.tv_sec;
-                        pcap_dump((u_char *)ce->f_pcap, pkt_header, pkt_data);
-                        if (opt_packetbuffered)
+                        if (ce->f_pcap != NULL &&
+                            (opt_rtpsave != RTPSAVE_RTPEVENT || data[1] == ce->rtpmap_event))
                         {
-                            pcap_dump_flush(ce->f_pcap);
-                        }
-                    }
-                }
-                else if (save_this_rtp_packet &&
-                         ct->find_ip_port_ssrc(
-                             hsaddr(header_ip), htons(header_udp->source) & rtp_port_mask,
-                             get_ssrc(data, is_rtcp),
-                             &ce, &idx_rtp))
-                {
-                    if (ce->f_pcap != NULL &&
-                        (opt_rtpsave != RTPSAVE_RTPEVENT || data[1] == ce->rtpmap_event))
-                    {
-                        ce->last_packet_time = pkt_header->ts.tv_sec;
-                        pcap_dump((u_char *)ce->f_pcap, pkt_header, pkt_data);
-                        if (opt_packetbuffered)
-                        {
-                            pcap_dump_flush(ce->f_pcap);
+                            ce->last_packet_time = pkt_header->ts.tv_sec;
+                            pcap_dump((u_char *)ce->f_pcap, pkt_header, pkt_data);
+                            if (opt_packetbuffered)
+                                pcap_dump_flush(ce->f_pcap);
                         }
                     }
                 }
@@ -721,6 +705,8 @@ int main(int argc, char *argv[])
                         {
                             ct->table[idx].had_bye = 1;
                         }
+                        struct addr_addr_id aai = {header_ip->saddr, header_ip->daddr, header_ip->id};
+                        ct->table[idx].last_aai = aai;
                         /*s = gettag(data, datalen, "Content-Type:", &l) ?: gettag(data, datalen, "c:", &l);
                         if (l > 0 && s && strncasecmp(s, "application/sdp", l) == 0 &&
                             (sdp = strstr(data, "\r\n\r\n")) != NULL)
@@ -741,7 +727,9 @@ int main(int argc, char *argv[])
                             if (opt_packetbuffered)
                                 pcap_dump_flush(ct->table[idx].f_pcap);
 
-                            if (header_ip->version == 4 && header_ip->frag_off == htons(0x2000))
+                            // if (header_ip->version == 4 && header_ip->frag_off == htons(0x2000))
+                            if (header_ip->version == 4 &&
+                                (header_ip->frag_off & htons(0x3fff)) != 0)
                             {
                                 struct addr_addr_id aai = {header_ip->saddr, header_ip->daddr, header_ip->id};
                                 // Write fragment 0 first (done above), then flush buffered later fragments
@@ -768,7 +756,13 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
-                    if (verbosity >= 3)
+                    struct addr_addr_id aai = {header_ip->saddr, header_ip->daddr, header_ip->id};
+                    idx = ct->find_by_aai(aai);
+                    if (idx >= 0)
+                    {
+                        parse_sdp(data, datalen, &ct->table[idx]);
+                    }
+                    else if (verbosity >= 3)
                     {
                         char st1[INET6_ADDRSTRLEN];
                         char st2[INET6_ADDRSTRLEN];
@@ -783,9 +777,9 @@ int main(int argc, char *argv[])
                             inet_ntop(AF_INET6, &(header_ipv6->saddr), st1, sizeof(st1));
                             inet_ntop(AF_INET6, &(header_ipv6->daddr), st2, sizeof(st2));
                         }
-                        printf("Skipping udp packet %s:%d->%s:%d\n",
+                        printf("Skipping udp packet %s:%d->%s:%d: %s\n",
                                st1, htons(header_udp->source),
-                               st2, htons(header_udp->dest));
+                               st2, htons(header_udp->dest), data);
                     }
                 }
             }

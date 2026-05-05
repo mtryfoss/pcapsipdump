@@ -87,6 +87,7 @@ int calltable::add(
     table[idx].f_pcap = NULL;
     table[idx].first_packet_time = time;
     table[idx].last_packet_time = time;
+    table[idx].last_aai = addr_addr_id{};
     global_last_packet_time = time;
 #ifdef USE_CALLTABLE_CACHE
     {
@@ -130,6 +131,21 @@ int calltable::find_by_call_id(
     }
     return -1;
 #endif
+}
+
+int calltable::find_by_aai(
+    struct addr_addr_id aai)
+{
+    int i;
+    for (i = 0; i < (int)table.size(); i++)
+    {
+        if ((table[i].is_used != 0) &&
+            aai_equal(aai, table[i].last_aai))
+        {
+            return i;
+        }
+    }
+    return -1;
 }
 
 int calltable::add_ip_port(
@@ -229,6 +245,32 @@ int calltable::find_ip_port_ssrc(
     cache[ap] = (struct ce_irtp_ssrc){NULL, -1, 0};
 #endif
     return 0;
+}
+
+int calltable::find_all_ip_port_ssrc(
+    in_addr_t addr,
+    unsigned short port,
+    uint32_t ssrc,
+    std::vector<calltable_element *> &matches)
+{
+    int i_leg, i_rtp;
+
+    for (i_leg = 0; i_leg < (int)table.size(); i_leg++)
+    {
+        for (i_rtp = 0; i_rtp < MIN(calltable_max_ip_per_call, table[i_leg].ip_n); i_rtp++)
+        {
+            if (table[i_leg].port[i_rtp] == port &&
+                table[i_leg].ip[i_rtp] == addr)
+            {
+                if (!table[i_leg].had_bye || table[i_leg].ssrc[i_rtp] == ssrc)
+                {
+                    table[i_leg].ssrc[i_rtp] = ssrc;
+                    matches.push_back(&table[i_leg]);
+                }
+            }
+        }
+    }
+    return matches.size();
 }
 
 int calltable::do_cleanup(time_t currtime)
@@ -358,4 +400,8 @@ void calltable::delete_frags(struct addr_addr_id aai)
 {
     auto key = std::make_tuple(aai.saddr, aai.daddr, aai.id);
     frag_buffer.erase(key);
+}
+
+bool aai_equal(const struct addr_addr_id &a, const struct addr_addr_id &b) {
+    return a.saddr == b.saddr && a.daddr == b.daddr && a.id == b.id;
 }
