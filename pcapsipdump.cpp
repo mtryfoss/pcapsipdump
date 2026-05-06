@@ -62,14 +62,14 @@ void sigint_handler(int param)
 {
     printf("SIGINT received, terminating\n");
     ct->do_cleanup(0);
-    exit(1);
+    exit(0);
 }
 
 void sigterm_handler(int param)
 {
     printf("SIGTERM received, terminating\n");
     ct->do_cleanup(0);
-    exit(1);
+    exit(0);
 }
 
 #define RTPSAVE_NONE 0
